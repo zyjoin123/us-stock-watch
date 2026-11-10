@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0f1115">
+<title>美股盯盘</title>
+<style>
+:root{--bg:#0f1115;--card:#181b22;--line:#262a33;--text:#e8eaed;--sub:#8b93a1;--up:#f6465d;--down:#0ecb81;--acc:#3b82f6}
+body.green-up{--up:#0ecb81;--down:#f6465d}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.4 -apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",sans-serif;padding-bottom:env(safe-area-inset-bottom)}
+header{position:sticky;top:0;z-index:5;background:var(--bg);padding:calc(10px + env(safe-area-inset-top)) 14px 8px;border-bottom:1px solid var(--line)}
+.top{display:flex;justify-content:space-between;align-items:center}
+h1{font-size:19px;margin:0}
+.status{font-size:12px;color:var(--sub);text-align:right}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px;background:var(--sub)}
+.dot.on{background:var(--down)}
+.idx{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px 14px 4px}
+.idx.fut{grid-template-columns:repeat(2,1fr);padding-top:4px}
+.sec{padding:18px 14px 6px;font-size:17px;font-weight:600}
+.nw{display:block;padding:12px 14px;border-bottom:1px solid var(--line);color:var(--text);text-decoration:none}
+.nw .t{font-weight:600;font-size:15px}
+.nw .b{font-size:13px;color:var(--sub);margin-top:3px}
+.nw .m{font-size:12px;color:var(--sub);margin-top:4px}
+.tk{display:inline-block;background:#2a3140;color:#9cc3ff;border-radius:4px;padding:1px 6px;font-size:12px;margin-right:6px;font-weight:600}
+.ic{background:var(--card);border-radius:10px;padding:9px 10px}
+.ic .n{font-size:12px;color:var(--sub)}
+.ic .p{font-size:16px;font-weight:600;margin-top:2px;font-variant-numeric:tabular-nums}
+.ic .c{font-size:12px;font-variant-numeric:tabular-nums}
+.bar{display:flex;gap:8px;padding:10px 14px;flex-wrap:wrap}
+.bar input{flex:1;min-width:140px;background:var(--card);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:9px 10px;font-size:15px;text-transform:uppercase}
+.bar button,.seg button{background:var(--card);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 12px;font-size:14px}
+.bar button.pri{background:var(--acc);border-color:var(--acc)}
+.seg{display:flex;gap:6px;padding:0 14px 6px;flex-wrap:wrap}
+.seg button.act{border-color:var(--acc);color:var(--acc)}
+.head,.row{display:grid;grid-template-columns:1fr 92px 84px;align-items:center;padding:0 14px}
+.head{font-size:12px;color:var(--sub);padding-top:6px;padding-bottom:6px}
+.head span:not(:first-child),.row .r{text-align:right}
+.row{padding-top:11px;padding-bottom:11px;border-bottom:1px solid var(--line)}
+.row .s{font-weight:600;font-size:16px}
+.row .nm{font-size:12px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .px{font-size:16px;font-variant-numeric:tabular-nums}
+.pill{display:inline-block;min-width:74px;text-align:center;border-radius:6px;padding:6px 4px;font-weight:600;font-size:14px;color:#fff;font-variant-numeric:tabular-nums}
+.up{color:var(--up)}.down{color:var(--down)}
+.pill.up{background:var(--up);color:#fff}.pill.down{background:var(--down);color:#fff}.pill.flat{background:#3a3f4a}
+.flash{animation:fl .8s}
+@keyframes fl{from{background:rgba(59,130,246,.18)}to{background:transparent}}
+.foot{padding:14px;font-size:12px;color:var(--sub);text-align:center}
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:flex-end;z-index:10}
+.sheet.show{display:flex}
+.panel{background:var(--card);width:100%;border-radius:16px 16px 0 0;padding:16px 16px calc(18px + env(safe-area-inset-bottom));max-height:85vh;overflow:auto}
+.panel h2{margin:0;font-size:20px}
+.panel .big{font-size:30px;font-weight:700;margin:6px 0 2px;font-variant-numeric:tabular-nums}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;margin:14px 0}
+.grid2 div{display:flex;justify-content:space-between;font-size:14px;border-bottom:1px solid var(--line);padding-bottom:6px}
+.grid2 span:first-child{color:var(--sub)}
+.range{height:6px;background:var(--line);border-radius:3px;position:relative;margin:8px 0 4px}
+.range i{position:absolute;top:-4px;width:3px;height:14px;background:var(--text);border-radius:2px}
+.acts{display:flex;gap:8px;margin-top:12px}
+.acts button{flex:1;padding:11px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:15px}
+.acts .del{color:#f6465d}
+</style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <h1>美股盯盘</h1>
+    <div class="status"><div><span class="dot" id="dot"></span><span id="mkt">--</span></div><div id="upd">--</div></div>
+  </div>
+</header>
+<div class="idx" id="idx"></div>
+<div class="idx fut" id="fut"></div>
+<div class="idx" id="macro"></div><div style="padding:2px 14px 0;font-size:11px;color:var(--sub)" id="mdate"></div>
+<div class="bar">
+  <input id="add" placeholder="输入代码，如 TSLA" autocomplete="off" autocapitalize="characters">
+  <button class="pri" id="addBtn">添加</button>
+  <button id="refBtn">刷新</button>
+</div>
+<div class="seg" id="sort">
+  <button data-k="default" class="act">自选顺序</button>
+  <button data-k="pct">涨幅</button>
+  <button data-k="-pct">跌幅</button>
+  <button data-k="cap">市值</button>
+  <button id="colorBtn">红涨绿跌</button>
+</div>
+<div class="head"><span>名称</span><span>最新价</span><span>涨跌幅</span></div>
+<div id="list"></div>
+<div class="sec">美股热点</div>
+<div id="news"></div>
+<div class="foot">行情来自公开报价接口，可能有延迟，仅供参考。<br>每 10 秒自动刷新，自选股保存在本机浏览器。</div>
+
+<div class="sheet" id="sheet"><div class="panel" id="panel"></div></div>
+
+<script>
+const INDICES=[["SPY","标普 SPY"],["QQQ","纳指 QQQ"],["DIA","道指 DIA"]];
+const MACRO=[["VIX","19.92","-22.31%",-1],["美债10年","4.88%","+3bp",1],["美元指数","101.68","-0.61%",-1]];const MACRO_DATE="11月9日";
+const FUT=[["GC","纽约黄金"],["CL","纽约原油"]];
+const DEFAULT=["NVDA","AAPL","MSFT","AMZN","GOOGL","META","TSLA","AMD","AVGO"];
+const NEWS={"updated_at": "2026-11-10T21:20:00+08:00", "source": "X 热点新闻（X Trending stories，近24小时）", "note": "X 热点故事接口不提供浏览量，heat 字段暂为 null；链接打开为 X 上的热点汇总页。", "items": [{"ticker": "NVDA", "title": "英伟达股价因中期选举和CEO丑闻双重打击下跌", "brief": "中期选举后AI板块承压，周末董事会宣布调查黄仁勋涉间谍关联的私人关系，股价再跌；公司称无安全泄露。", "heat": null, "url": "https://x.com/i/trending/2120053300783399222", "updated_at": "2026-11-10T15:21:44+08:00"}, {"ticker": "NVDA", "title": "美银把英伟达、美光、Lam移出 US 1 精选名单", "brief": "三者仍维持买入评级；英伟达11月17日发财报。", "heat": null, "url": "https://x.com/i/trending/2120131964607005028", "updated_at": "2026-11-10T20:35:17+08:00"}, {"ticker": "NVDA", "title": "木头姐ARK逢低买入约1600万美元英伟达", "brief": "股价较10月高点回落超20%时加仓，同时加仓AMD、减持博通。", "heat": null, "url": "https://x.com/i/trending/2120043717692133690", "updated_at": "2026-11-10T14:46:01+08:00"}, {"ticker": "AAPL", "title": "iPhone Duo 折叠屏用户反映铰链松动", "brief": "苹果首款折叠屏10月23日开售，部分用户反映合上时有晃动，苹果正为受影响机型更换。", "heat": null, "url": "https://x.com/i/trending/2119543935831859492", "updated_at": "2026-11-10T18:23:40+08:00"}, {"ticker": "MSFT", "title": "微软游说白宫放弃中国光模块禁令", "brief": "微软称禁令会拖慢其美国AI数据中心扩建，美国替代供应商产能不足。", "heat": null, "url": "https://x.com/i/trending/2120125150469218415", "updated_at": "2026-11-10T20:07:40+08:00"}, {"ticker": "AMZN", "title": "纽约市推《配送保护法》，要求亚马逊直接雇佣配送员", "brief": "市长马姆达尼联合工会推动，亚马逊警告可能影响超5000个岗位。", "heat": null, "url": "https://x.com/i/trending/2119943544601457025", "updated_at": "2026-11-10T11:08:31+08:00"}, {"ticker": "AMZN", "title": "特斯拉、亚马逊、英伟达等反对其股票在OKX-ICE平台代币化交易", "brief": "62家入选公司中56家提出反对。", "heat": null, "url": "https://x.com/i/trending/2120059753216758266", "updated_at": "2026-11-10T15:47:53+08:00"}, {"ticker": "GOOGL", "title": "科技巨头表外AI基础设施承诺达4.49万亿美元", "brief": "Alphabet以1.08万亿美元居首，Meta为8100亿美元，分析师提示回报不及预期的风险。", "heat": null, "url": "https://x.com/i/trending/2119951932575871004", "updated_at": "2026-11-10T08:42:16+08:00"}, {"ticker": "META", "title": "Meta联手埃森哲、德勤组建企业AI销售团队", "brief": "通过WhatsApp和Messenger销售企业AI代理，寻找广告以外的新收入。", "heat": null, "url": "https://x.com/i/trending/2119832883959336970", "updated_at": "2026-11-10T00:52:20+08:00"}, {"ticker": "TSLA", "title": "特斯拉11月9日涨5.5%收于378.05美元", "brief": "无人监督Robotaxi扩展到圣安东尼奥；德州工厂计划2027年中停产Cybertruck，转产Cybercab。", "heat": null, "url": "https://x.com/i/trending/2119926124113519085", "updated_at": "2026-11-10T07:00:31+08:00"}, {"ticker": "AMD", "title": "奥本海默上调AMD至跑赢大盘，目标价600美元", "brief": "三季度数据中心收入增长97%至85.5亿美元，股价周五大涨11%。", "heat": null, "url": "https://x.com/i/trending/2119776628914217402", "updated_at": "2026-11-10T04:23:32+08:00"}, {"ticker": "AVGO", "title": "ARK减持博通", "brief": "近24小时X上没有博通专属热点，仅在ARK调仓新闻中提及减持。", "heat": null, "url": "https://x.com/i/trending/2120043717692133690", "updated_at": "2026-11-10T14:46:01+08:00"}]};
+let watch=JSON.parse(localStorage.getItem("watch2")||"null")||DEFAULT.slice();
+let sortKey="default",data={},prev={};
+let greenUp=localStorage.getItem("greenUp")==="1";
+const $=s=>document.querySelector(s);
+
+function save(){localStorage.setItem("watch2",JSON.stringify(watch))}
+function parse(code,str){
+  const f=str.split("~");if(f.length<40||!f[3])return null;
+  return{code,name:f[1],price:+f[3],prev:+f[4],open:+f[5],vol:+f[6],time:f[30],chg:+f[31],pct:+f[32],high:+f[33],low:+f[34],amt:+f[37],cap:+f[45]||0,hi52:+f[48]||0,lo52:+f[49]||0,en:f[46]||""};
+}
+function load(){
+  const codes=[...INDICES.map(x=>x[0]),...watch];
+  return new Promise(res=>{
+    const s=document.createElement("script");
+    s.charset="gbk";
+    s.src="https://qt.gtimg.cn/q="+codes.map(c=>"us"+c).concat(FUT.map(x=>"hf_"+x[0])).join(",")+"&_="+Date.now();
+    s.onload=s.onerror=()=>{
+      codes.forEach(c=>{const v=window["v_us"+c];if(v){const p=parse(c,v);if(p){prev[c]=data[c]&&data[c].price;data[c]=p}}});
+      FUT.forEach(([c,n])=>{const v=window["v_hf_"+c];if(v){const f=v.split(",");const price=+f[0],pv=+f[7];if(price)data["F_"+c]={code:c,name:n,price,prev:pv,chg:price-pv,pct:+f[1]}}});
+      s.remove();res();
+    };
+    document.body.appendChild(s);
+  });
+}
+const cls=v=>v>0?"up":v<0?"down":"flat";
+const fx=(v,d=2)=>isFinite(v)&&v?v.toFixed(d):"--";
+const sign=v=>(v>0?"+":"")+v.toFixed(2);
+function bigNum(v){if(!v)return"--";if(v>=1e4)return(v/1e4).toFixed(2)+"万亿";return v.toFixed(0)+"亿"}
+function money(v){if(!v)return"--";if(v>=1e8)return(v/1e8).toFixed(2)+"亿";if(v>=1e4)return(v/1e4).toFixed(0)+"万";return v.toFixed(0)}
+
+function render(){
+  $("#idx").innerHTML=INDICES.map(([c,n])=>{const d=data[c];if(!d)return`<div class="ic"><div class="n">${n}</div><div class="p">--</div></div>`;
+    return`<div class="ic"><div class="n">${n}</div><div class="p ${cls(d.pct)}">${d.price.toFixed(2)}</div><div class="c ${cls(d.pct)}">${sign(d.chg)} ${sign(d.pct)}%</div></div>`}).join("");
+  $("#fut").innerHTML=FUT.map(([c,n])=>{const d=data["F_"+c];if(!d)return"";
+    return`<div class="ic"><div class="n">${n}</div><div class="p ${cls(d.pct)}">${d.price.toFixed(2)}</div><div class="c ${cls(d.pct)}">${sign(d.chg)} ${sign(d.pct)}%</div></div>`}).join("");
+  let rows=watch.filter(c=>data[c]).map(c=>data[c]);
+  if(sortKey==="pct")rows.sort((a,b)=>b.pct-a.pct);
+  if(sortKey==="-pct")rows.sort((a,b)=>a.pct-b.pct);
+  if(sortKey==="cap")rows.sort((a,b)=>b.cap-a.cap);
+  $("#list").innerHTML=rows.map(d=>{
+    const fl=prev[d.code]!=null&&prev[d.code]!==d.price?" flash":"";
+    return`<div class="row${fl}" data-c="${d.code}"><div><div class="s">${d.code}</div><div class="nm">${d.name}</div></div>
+    <div class="r px ${cls(d.pct)}">${d.price.toFixed(2)}</div><div class="r"><span class="pill ${cls(d.pct)}">${sign(d.pct)}%</span></div></div>`}).join("");
+  const t=Object.values(data)[0];
+  $("#upd").textContent="更新 "+new Date().toLocaleTimeString("zh-CN",{hour12:false});
+  marketStatus();
+}
+function marketStatus(){
+  const et=new Date(new Date().toLocaleString("en-US",{timeZone:"America/New_York"}));
+  const d=et.getDay(),m=et.getHours()*60+et.getMinutes();
+  let s="休市",on=false;
+  if(d>0&&d<6){if(m>=570&&m<960){s="交易中";on=true}else if(m>=240&&m<570)s="盘前";else if(m>=960&&m<1200)s="盘后"}
+  $("#mkt").textContent="美东 "+et.toTimeString().slice(0,5)+" · "+s;
+  $("#dot").className="dot"+(on?" on":"");
+}
+function detail(c){
+  const d=data[c];if(!d)return;
+  let pos="";if(d.hi52>d.lo52){const p=Math.min(100,Math.max(0,(d.price-d.lo52)/(d.hi52-d.lo52)*100));pos=`<div style="font-size:13px;color:var(--sub);margin-top:6px">52 周区间</div><div class="range"><i style="left:${p}%"></i></div><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--sub)"><span>${fx(d.lo52)}</span><span>${fx(d.hi52)}</span></div>`}
+  $("#panel").innerHTML=`<h2>${d.code} · ${d.name}</h2><div style="color:var(--sub);font-size:13px">${d.en}</div>
+  <div class="big ${cls(d.pct)}">${d.price.toFixed(2)}</div><div class="${cls(d.pct)}">${sign(d.chg)}  ${sign(d.pct)}%</div>
+  <div class="grid2"><div><span>今开</span><span>${fx(d.open)}</span></div><div><span>昨收</span><span>${fx(d.prev)}</span></div>
+  <div><span>最高</span><span>${fx(d.high)}</span></div><div><span>最低</span><span>${fx(d.low)}</span></div>
+  <div><span>成交量</span><span>${money(d.vol)}</span></div><div><span>成交额</span><span>${money(d.amt)}</span></div>
+  <div><span>市值</span><span>${bigNum(d.cap)}</span></div><div><span>时间</span><span>${(d.time||"").slice(5,16)}</span></div></div>${pos}
+  <div class="acts"><button onclick="move('${c}',-1)">上移</button><button onclick="move('${c}',1)">下移</button><button class="del" onclick="removeC('${c}')">删除</button></div>
+  <div class="acts"><button onclick="window.open('https://finance.yahoo.com/quote/${c}','_blank')">查看图表</button><button onclick="closeS()">关闭</button></div>`;
+  $("#sheet").classList.add("show");
+}
+function closeS(){$("#sheet").classList.remove("show")}
+function removeC(c){watch=watch.filter(x=>x!==c);save();closeS();render()}
+function move(c,dir){const i=watch.indexOf(c),j=i+dir;if(j<0||j>=watch.length)return;[watch[i],watch[j]]=[watch[j],watch[i]];save();render()}
+async function addC(){
+  const c=$("#add").value.trim().toUpperCase().replace(/[^A-Z.]/g,"");if(!c)return;
+  if(watch.includes(c)){$("#add").value="";return}
+  watch.push(c);await load();
+  if(!data[c]){watch.pop();alert("没找到 "+c+"，请检查代码");return}
+  save();$("#add").value="";render();
+}
+$("#addBtn").onclick=addC;
+$("#add").addEventListener("keydown",e=>{if(e.key==="Enter")addC()});
+$("#refBtn").onclick=()=>load().then(render);
+$("#sheet").onclick=e=>{if(e.target.id==="sheet")closeS()};
+$("#list").onclick=e=>{const r=e.target.closest(".row");if(r)detail(r.dataset.c)};
+document.querySelectorAll("#sort button[data-k]").forEach(b=>b.onclick=()=>{sortKey=b.dataset.k;document.querySelectorAll("#sort button[data-k]").forEach(x=>x.classList.toggle("act",x===b));render()});
+function applyColor(){document.body.classList.toggle("green-up",greenUp);$("#colorBtn").textContent=greenUp?"绿涨红跌":"红涨绿跌"}
+$("#colorBtn").onclick=()=>{greenUp=!greenUp;localStorage.setItem("greenUp",greenUp?"1":"0");applyColor()};
+function renderNews(){
+  const items=NEWS.items.slice().sort((a,b)=>{const ia=watch.indexOf(a.ticker),ib=watch.indexOf(b.ticker);return (ia<0?99:ia)-(ib<0?99:ib)});
+  $("#news").innerHTML=items.map(n=>`<a class="nw" href="${n.url}" target="_blank" rel="noopener"><div class="t"><span class="tk">${n.ticker}</span>${n.title}</div><div class="b">${n.brief}</div><div class="m">${n.updated_at.slice(5,16).replace("T"," ")} · X 热点</div></a>`).join("");
+}
+renderNews();
+$("#macro").innerHTML=MACRO.map(([n,v,c,d])=>`<div class="ic"><div class="n">${n}</div><div class="p">${v}</div><div class="c ${d>0?"up":"down"}">${c}</div></div>`).join("");
+$("#mdate").textContent="VIX、美债、美元为昨日收盘（"+MACRO_DATE+"）";
+applyColor();
+load().then(render);
+setInterval(()=>{if(!document.hidden)load().then(render)},10000);
+setInterval(marketStatus,30000);
+</script>
+</body>
+</html>
